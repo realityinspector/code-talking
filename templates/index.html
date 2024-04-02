@@ -1,0 +1,106 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html>
+  <head>
+    <title>Code Talking Prototype</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.js"
+      defer
+    ></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+      <h1 class="text-3xl font-bold mb-4">Dineh / Navajo Translator Prototype</h1>
+      <p class="mb-4">
+       Responses take up to one minute or more. 
+      </p>
+      <div class="mb-4">
+        <a href="/file" class="text-blue-500 hover:underline"
+          >View System Prompt</a
+        >
+      </div>
+      <div x-data="chatbot()" class="bg-white shadow-md rounded-lg p-4">
+        <div class="mb-4">
+          <template x-for="message in messages" :key="message.id">
+            <div class="mb-2">
+              <strong x-text="message.role + ':'"></strong>
+              <span x-text="message.content"></span>
+            </div>
+          </template>
+          <div x-show="loading" class="text-center">
+            <img
+              src="{{ url_for('static', filename='loading.gif') }}"
+              alt="Loading..."
+              class="inline-block"
+            />
+          </div>
+        </div>
+        <div class="flex">
+          <input
+            x-model="newMessage"
+            @keydown.enter="sendMessage"
+            class="flex-grow border border-gray-300 rounded-l-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            type="text"
+            placeholder="Type your message..."
+          />
+          <button
+            @click="sendMessage"
+            class="bg-blue-500 hover:bg-blue-600 text-white rounded-r-md px-4 py-2"
+          >
+            Send
+          </button>
+        </div>
+        <div class="mt-4">
+          <button
+            @click="makePublic"
+            class="bg-green-500 hover:bg-green-600 text-white rounded-md px-4 py-2"
+          >
+            Make Conversation Public
+          </button>
+        </div>
+      </div>
+    </div>
+    <script>
+      function chatbot() {
+        return {
+          messages: [],
+          newMessage: "",
+          loading: false,
+          sendMessage() {
+            if (this.newMessage.trim() === "") return;
+            if (this.messages.length >= 10) {
+              alert(
+                "You have reached the maximum number of messages. Please reload the page to start a new conversation.",
+              );
+              return;
+            }
+            this.messages.push({ role: "user", content: this.newMessage });
+            const userMessage = this.newMessage;
+            this.newMessage = "";
+            this.loading = true;
+            $.post("/chat", { message: userMessage }, (data) => {
+              this.messages.push({ role: "assistant", content: data.message });
+              this.loading = false;
+            });
+          },
+          makePublic() {
+            $.ajax({
+              type: "POST",
+              url: "/make-public",
+              data: JSON.stringify(this.messages),
+              contentType: "application/json",
+              success: (data) => {
+                window.location.href = data.url;
+              },
+            });
+          },
+        };
+      }
+    </script>
+  </body>
+</html>
